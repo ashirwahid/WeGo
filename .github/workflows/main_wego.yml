@@ -13,23 +13,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read # This is required for actions/checkout
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x'
+          node-version: '18.x' # Use an LTS version for better stability
 
       - name: Install dependencies
         run: |
-          npm install --legacy-peer-deps  # Modify if necessary
-          npm run build --if-present
+          npm install --legacy-peer-deps  # Use legacy-peer-deps to address dependency conflicts
+          npm run build --if-present        # Build the application, only if the build script exists
 
       - name: Zip artifact for deployment
-        run: zip -r release.zip . -x "node_modules/*"  # Exclude node_modules
+        run: |
+          zip -r release.zip . -x "node_modules/*" ".git/*" ".github/*" # Exclude unnecessary directories
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -43,7 +45,7 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
@@ -51,13 +53,14 @@ jobs:
           name: node-app
 
       - name: Unzip artifact for deployment
-        run: unzip release.zip
-      
-      - name: 'Deploy to Azure Web App'
+        run: |
+          unzip release.zip  # Unzip the application files for deployment
+
+      - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'WeGo'
+          app-name: 'WeGo'  # Replace with your Azure App Service name
           slot-name: 'Production'
-          package: .
+          package: .  # Path to the unzipped application files
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_6192596A3FB74CB19A5ED0765CA77E65 }}
